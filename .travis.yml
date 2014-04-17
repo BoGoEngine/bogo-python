@@ -7,8 +7,16 @@ branches:
     - master
     - develop
 
+before_install:
+  - pip install coveralls
+
 # command to run tests
-script: nosetests
+script:
+  - NOSE_PATH=$(which nosetests)
+  - coverage run $NOSE_PATH --attr '!skip-travis'
+
+after_success:
+  - coveralls
 
 notifications:
   irc:
