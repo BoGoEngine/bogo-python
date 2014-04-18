@@ -21,8 +21,8 @@
 #
 
 from __future__ import unicode_literals
-from .validation import is_valid_combination
-from . import utils, accent, mark
+from bogo.validation import is_valid_combination
+from bogo import utils, accent, mark
 import logging
 import copy
 

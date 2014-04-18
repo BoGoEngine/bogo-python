@@ -22,9 +22,7 @@
 
 from __future__ import unicode_literals
 import collections
-from . import accent
-from . import mark
-from . import utils
+from bogo import accent, mark, utils
 Accent = accent.Accent
 
 

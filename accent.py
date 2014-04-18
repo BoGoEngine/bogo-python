@@ -24,7 +24,7 @@
 # at the end of new_bogo_engine.transform()
 
 from __future__ import unicode_literals
-from . import utils
+from bogo import utils
 
 
 class Accent:
