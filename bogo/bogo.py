@@ -24,7 +24,6 @@ from __future__ import unicode_literals
 from bogo.validation import is_valid_combination
 from bogo import utils, accent, mark
 import logging
-import copy
 
 
 Mark = mark.Mark
@@ -38,55 +37,60 @@ class Action:
     ADD_CHAR = 0
 
 
-default_config = {
-    "input-method": "telex",
-    "skip-non-vietnamese": True,
-    "default-input-methods": {
-        "simple-telex": {
-            "a": "a^",
-            "o": "o^",
-            "e": "e^",
-            "w": ["u*", "o*", "a+"],
-            "d": "d-",
-            "f": "\\",
-            "s": "/",
-            "r": "?",
-            "x": "~",
-            "j": "."
-        },
-        "telex": {
-            "a": "a^",
-            "o": "o^",
-            "e": "e^",
-            "w": ["u*", "o*", "a+", "<ư"],
-            "d": "d-",
-            "f": "\\",
-            "s": "/",
-            "r": "?",
-            "x": "~",
-            "j": ".",
+def get_telex_definition(w_shorthand=True, brackets_shorthand=True):
+    """Create a definition dictionary for the TELEX input method
+
+    Args:
+        w_shorthand (optional): allow a stand-alone w to be
+            interpreted as an ư. Default to True.
+        brackets_shorthand (optional, True): allow typing ][ as
+            shorthand for ươ. Default to True.
+
+    Returns a dictionary to be passed into process_key().
+    """
+    telex = {
+        "a": "a^",
+        "o": "o^",
+        "e": "e^",
+        "w": ["u*", "o*", "a+"],
+        "d": "d-",
+        "f": "\\",
+        "s": "/",
+        "r": "?",
+        "x": "~",
+        "j": ".",
+    }
+
+    if w_shorthand:
+        telex["w"].append('<ư')
+
+    if brackets_shorthand:
+        telex.update({
             "]": "<ư",
             "[": "<ơ",
             "}": "<Ư",
             "{": "<Ơ"
-        },
-        "vni": {
-            "6": ["a^", "o^", "e^"],
-            "7": ["u*", "o*"],
-            "8": "a+",
-            "9": "d-",
-            "2": "\\",
-            "1": "/",
-            "3": "?",
-            "4": "~",
-            "5": "."
-        }
+        })
+
+    return telex
+
+
+def get_vni_definition():
+    """Create a definition dictionary for the VNI input method.
+
+    Returns a dictionary to be passed into process_key().
+    """
+    return {
+        "6": ["a^", "o^", "e^"],
+        "7": ["u*", "o*"],
+        "8": "a+",
+        "9": "d-",
+        "2": "\\",
+        "1": "/",
+        "3": "?",
+        "4": "~",
+        "5": "."
     }
-}
-
-
-def get_default_config():
-    return copy.deepcopy(default_config)
 
 
 def is_processable(comps):
@@ -94,13 +98,26 @@ def is_processable(comps):
     return is_valid_combination(('', comps[1], comps[2]), final_form=False)
 
 
-def process_key(string, key, fallback_sequence="", config=None):
-    """
-    Try to apply the transformations inferred from `key` to `string` with
-    `fallback_sequence` as a reference. `config` should be a dictionary-like
-    object following the form of `default_config`.
+def process_key(string, key,
+                fallback_sequence="", input_method_definition=None,
+                skip_non_vietnamese=True):
+    """Process a keystroke.
 
-    returns (new string, new fallback_sequence)
+    Args:
+        string: The previously processed string or "".
+        key: The keystroke.
+        fallback_sequence: The previous keystrokes.
+        input_method_definition (optional): A dictionary listing
+            transformation rules. Defaults to get_telex_definition().
+        skip_non_vietnamese (optional): Whether to skip results that
+            doesn't seem like Vietnamese. Defaults to True.
+
+    Returns a tuple. The first item of which is the processed
+    Vietnamese string, the second item is the next fallback sequence.
+    The two items are to be fed back into the next call of process_key()
+    as `string` and `fallback_sequence`. If `skip_non_vietnamese` is
+    True and the resulting string doesn't look like Vietnamese,
+    both items contain the `fallback_sequence`.
 
     >>> process_key('a', 'a', 'a')
     (â, aa)
@@ -110,26 +127,36 @@ def process_key(string, key, fallback_sequence="", config=None):
 
     >>> process_key('â', 'a', 'aa')
     (aa, aa)
+
+    `input_method_definition` is a dictionary that maps keystrokes to
+    their effect string. The effects can be one of the following:
+
+    'a^': a with circumflex (â), only affect an existing 'a family'
+    'a+': a with breve (ă), only affect an existing 'a family'
+    'e^': e with circumflex (ê), only affect an existing 'e family'
+    'o^': o with circumflex (ô), only affect an existing 'o family'
+    'o*': o with horn (ơ), only affect an existing 'o family'
+    'd-': d with bar (đ), only affect an existing 'd'
+    '/': acute (sắc), affect an existing vowel
+    '\': grave (huyền), affect an existing vowel
+    '?': hook (hỏi), affect an existing vowel
+    '~': tilde (ngã), affect an existing vowel
+    '.': dot (nặng), affect an existing vowel
+    '<ư': append ư
+    '<ơ': append ơ
+
+    A keystroke entry can have multiple effects, in which case the
+    dictionary entry's value should be a list of the possible
+    effect strings. Although you should try to avoid this if
+    you are defining a custom input method rule.
     """
     # TODO Figure out a way to remove the `string` argument. Perhaps only the
     #      key sequence is needed?
     def default_return():
         return string + key, fallback_sequence + key
 
-    # Let's be extra-safe
-    if config is None:
-        config = default_config
-    else:
-        tmp = config
-        config = default_config.copy()
-        config.update(tmp)  # OMG, Python's dict.update is IN-PLACE!
-
-    # Get the input method translation table (Telex, VNI,...)
-    if config["input-method"] in config["default-input-methods"]:
-        im = config["default-input-methods"][config["input-method"]]
-    elif "custom-input-methods" in config and \
-            config["input-method"] in config["custom-input-methods"]:
-        im = config["custom-input-methods"][config["input-method"]]
+    if input_method_definition is None:
+        input_method_definition = get_telex_definition()
 
     comps = utils.separate(string)
 
@@ -137,8 +164,8 @@ def process_key(string, key, fallback_sequence="", config=None):
     #     return default_return()
 
     # Find all possible transformations this keypress can generate
-    trans_list = get_transformation_list(key, im, fallback_sequence)
-    logging.debug("trans_list = %s", trans_list)
+    trans_list = get_transformation_list(
+        key, input_method_definition, fallback_sequence)
 
     # Then apply them one by one
     new_comps = list(comps)
@@ -170,7 +197,7 @@ def process_key(string, key, fallback_sequence="", config=None):
     else:
         fallback_sequence += key
 
-    if config['skip-non-vietnamese'] is True and key.isalpha() and \
+    if skip_non_vietnamese is True and key.isalpha() and \
             not is_valid_combination(new_comps, final_form=False):
         result = fallback_sequence, fallback_sequence
     else:
