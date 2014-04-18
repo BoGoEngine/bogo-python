@@ -182,13 +182,41 @@ def process_key(string, key,
             for trans in map(lambda x: "_" + x, trans_list):
                 new_comps = transform(new_comps, trans)
 
-            # TODO refactor
-            if config["input-method"] == "telex" and \
-                    len(fallback_sequence) >= 1 and \
-                    new_comps[1] and new_comps[1][-1].lower() == "u" and \
-                    (fallback_sequence[-1:]+key).lower() == "ww" and \
-                    not (len(fallback_sequence) >= 2 and
-                         fallback_sequence[-2].lower() == "u"):
+            # Undoing the w key with the TELEX input method with the
+            # w:<ư extension requires some care.
+            #
+            # The input (ư, w) should be undone as w
+            # on the other hand, (ư, uw) should return uw.
+            #
+            # transform() is not aware of the 2 ways to generate
+            # ư in TELEX and always think ư was created by uw.
+            # Therefore, after calling transform() to undo ư,
+            # we always get ['', 'u', ''].
+            #
+            # So we have to clean it up a bit.
+            def is_telex_like():
+                return '<ư' in input_method_definition["w"]
+
+            def undone_vowel_ends_with_u():
+                return new_comps[1] and new_comps[1][-1].lower() == "u"
+
+            def not_first_key_press():
+                return len(fallback_sequence) >= 1
+
+            def user_typed_ww():
+                return (fallback_sequence[-1:]+key).lower() == "ww"
+
+            def user_didnt_type_uww():
+                return not (len(fallback_sequence) >= 2 and
+                            fallback_sequence[-2].lower() == "u")
+
+            if is_telex_like() and \
+                    not_first_key_press() and \
+                    undone_vowel_ends_with_u() and \
+                    user_typed_ww() and \
+                    user_didnt_type_uww():
+                # The vowel part of new_comps is supposed to end with
+                # u now. That u should be removed.
                 new_comps[1] = new_comps[1][:-1]
 
         if tmp == new_comps:
