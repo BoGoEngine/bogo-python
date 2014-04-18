@@ -113,11 +113,6 @@ def process_key(string, key, fallback_sequence="", config=None):
     """
     # TODO Figure out a way to remove the `string` argument. Perhaps only the
     #      key sequence is needed?
-    logging.debug("== In process_key() ==")
-    logging.debug("key = %s", key)
-    logging.debug("string = %s", string)
-    logging.debug("fallback_sequence = %s", fallback_sequence)
-
     def default_return():
         return string + key, fallback_sequence + key
 
@@ -137,7 +132,6 @@ def process_key(string, key, fallback_sequence="", config=None):
         im = config["custom-input-methods"][config["input-method"]]
 
     comps = utils.separate(string)
-    logging.debug("separate(string) = %s", str(comps))
 
     # if not is_processable(comps):
     #     return default_return()
@@ -151,7 +145,6 @@ def process_key(string, key, fallback_sequence="", config=None):
     for trans in trans_list:
         new_comps = transform(new_comps, trans)
 
-    logging.debug("new_comps: %s", str(new_comps))
     if new_comps == comps:
         tmp = list(new_comps)
 
@@ -183,7 +176,6 @@ def process_key(string, key, fallback_sequence="", config=None):
     else:
         result = utils.join(new_comps), fallback_sequence
 
-    logging.debug("Final word: %s, %s", result[0], result[1])
     return result
 
 
