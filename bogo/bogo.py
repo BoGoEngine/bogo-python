@@ -40,10 +40,7 @@ class Action:
 
 default_config = {
     "input-method": "telex",
-    "output-charset": "utf-8",
     "skip-non-vietnamese": True,
-    "enable-text-expansion": False,
-    "auto-capitalize-expansion": False,
     "default-input-methods": {
         "simple-telex": {
             "a": "a^",
