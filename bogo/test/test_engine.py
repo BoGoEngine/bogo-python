@@ -6,33 +6,23 @@ from nose.plugins.attrib import attr
 from functools import partial
 import codecs
 
-from bogo.bogo import *
+from bogo.bogo import process_key, Action, get_action
 from bogo.mark import Mark
 import os
 
-test_config = {
-    "input-method": "telex",
-    "skip-non-vietnamese": True
-}
 
-test_config_no_skip = {
-    "input-method": "telex",
-    "skip-non-vietnamese": False
-}
-
-
-def process_seq(seq, config=test_config):
+def process_seq(seq, skip_non_vietnamese=True):
     string = ""
     raw = string
     for i in seq:
         string, raw = process_key(string,
                                   i,
                                   fallback_sequence=raw,
-                                  config=config)
+                                  skip_non_vietnamese=skip_non_vietnamese)
     return string
 
 
-process_key_no_skip = partial(process_seq, config=test_config_no_skip)
+process_key_no_skip = partial(process_seq, skip_non_vietnamese=False)
 
 
 class TestHelpers():
