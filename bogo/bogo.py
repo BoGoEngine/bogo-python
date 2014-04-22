@@ -98,8 +98,25 @@ def is_processable(comps):
     return is_valid_combination(('', comps[1], comps[2]), final_form=False)
 
 
+def process_sequence(sequence,
+                     rules=None,
+                     skip_non_vietnamese=True):
+    result = ""
+    raw = result
+
+    for key in sequence:
+        result, raw = process_key(
+            string=result,
+            key=key,
+            fallback_sequence=raw,
+            rules=rules,
+            skip_non_vietnamese=skip_non_vietnamese)
+
+    return result
+
+
 def process_key(string, key,
-                fallback_sequence="", input_method_definition=None,
+                fallback_sequence="", rules=None,
                 skip_non_vietnamese=True):
     """Process a keystroke.
 
@@ -107,7 +124,7 @@ def process_key(string, key,
         string: The previously processed string or "".
         key: The keystroke.
         fallback_sequence: The previous keystrokes.
-        input_method_definition (optional): A dictionary listing
+        rules (optional): A dictionary listing
             transformation rules. Defaults to get_telex_definition().
         skip_non_vietnamese (optional): Whether to skip results that
             doesn't seem like Vietnamese. Defaults to True.
@@ -128,7 +145,7 @@ def process_key(string, key,
     >>> process_key('â', 'a', 'aa')
     (aa, aa)
 
-    `input_method_definition` is a dictionary that maps keystrokes to
+    `rules` is a dictionary that maps keystrokes to
     their effect string. The effects can be one of the following:
 
     'a^': a with circumflex (â), only affect an existing 'a family'
@@ -155,8 +172,8 @@ def process_key(string, key,
     def default_return():
         return string + key, fallback_sequence + key
 
-    if input_method_definition is None:
-        input_method_definition = get_telex_definition()
+    if rules is None:
+        rules = get_telex_definition()
 
     comps = utils.separate(string)
 
@@ -165,7 +182,7 @@ def process_key(string, key,
 
     # Find all possible transformations this keypress can generate
     trans_list = get_transformation_list(
-        key, input_method_definition, fallback_sequence)
+        key, rules, fallback_sequence)
 
     # Then apply them one by one
     new_comps = list(comps)
@@ -195,7 +212,7 @@ def process_key(string, key,
             #
             # So we have to clean it up a bit.
             def is_telex_like():
-                return '<ư' in input_method_definition["w"]
+                return '<ư' in rules["w"]
 
             def undone_vowel_ends_with_u():
                 return new_comps[1] and new_comps[1][-1].lower() == "u"
