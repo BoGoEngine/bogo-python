@@ -7,6 +7,13 @@ BoGo
 BoGo is a Python 3 Vietnamese input method conversion library. This library
 is intentionally functional with no internal state and side-effect.
 
+Installation
+------------
+
+```bash
+pip install bogo
+```
+
 Usage
 -----
 
