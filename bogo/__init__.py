@@ -14,17 +14,17 @@ Usage
 'mèo'
 ```
 
-Some functions from bogo.bogo are exported to package toplevel:
+Some functions from `bogo.core` are exported to package toplevel:
 
     - process_key()
     - process_sequence()
     - get_telex_definition()
     - get_vni_definition()
 
-Read help(bogo.bogo) for more help.
+Read `help(bogo.core)` for more help.
 """
 
-from bogo.bogo import \
+from bogo.core import \
     process_key, \
     process_sequence, \
     get_telex_definition, \

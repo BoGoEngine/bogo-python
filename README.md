@@ -32,10 +32,10 @@ Usage
 More help available with:
 
 ```python
->>> help(bogo.bogo)
+>>> help(bogo.core)
 ```
 
-Some functions from bogo.bogo are exported to package toplevel:
+Some functions from `bogo.core` are exported to package toplevel:
 
 - `process_key()`
 - `process_sequence()`

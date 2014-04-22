@@ -6,7 +6,7 @@ from nose.plugins.attrib import attr
 from functools import partial
 import codecs
 
-from bogo.bogo import _Action, _get_action, process_sequence
+from bogo.core import _Action, _get_action, process_sequence
 from bogo.mark import Mark
 import os
 

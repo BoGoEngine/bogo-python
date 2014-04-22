@@ -19,10 +19,10 @@ bogo.accent module
     :undoc-members:
     :show-inheritance:
 
-bogo.bogo module
+bogo.core module
 ----------------
 
-.. automodule:: bogo.bogo
+.. automodule:: bogo.core
     :members:
     :undoc-members:
     :show-inheritance:
