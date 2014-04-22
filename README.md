@@ -18,6 +18,14 @@ Usage
 'mèo'
 ```
 
-More help is available as docstring for each module and function.
 
-BoGo is well tested with Python 3.2 and Python 3.3.
+Some functions from bogo.bogo are exported to package toplevel:
+
+- `process_key()`
+- `process_sequence()`
+- `get_telex_definition()`
+- `get_vni_definition()`
+
+Read `help(bogo.bogo)` in the Python interpreter for more help.
+
+BoGo is extensively tested with Python 3.2 and Python 3.3.
