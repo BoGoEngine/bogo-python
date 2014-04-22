@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """\
-BoGo is a Python 3 Vietnamese input method conversion library. This library
+BoGo is a Vietnamese input method conversion library. This library
 is intentionally functional with no internal state and side-effect.
 
 Usage

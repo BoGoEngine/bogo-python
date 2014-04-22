@@ -4,16 +4,17 @@ setup(
     name='bogo',
     packages=['bogo'],
     version='1.0.0',
-    description='Python 3 library for implementing Vietnamese input method editors with a purely functional interface.',
+    description='Library for implementing Vietnamese input method editors with a purely functional interface.',
     author='Trung Ngo',
     author_email='ndtrung4419@gmail.com',
     url='https://github.com/BoGoEngine/bogo-python',
     download_url='https://github.com/BoGoEngine/bogo-python/archive/v1.0.tar.gz',
     keywords=['vietnamese'],
     classifiers=[
-        "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 2.7",
+        "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
         "Operating System :: OS Independent",
         "Intended Audience :: Developers",
@@ -21,7 +22,7 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules"
     ],
     long_description="""\
-BoGo is a Python 3 Vietnamese input method conversion library. This library
+BoGo is a Vietnamese input method conversion library. This library
 is intentionally functional with no internal state and side-effect.
 
 Usage
@@ -48,7 +49,7 @@ Some functions from bogo.core are exported to package toplevel:
 - `get_telex_definition()`
 - `get_vni_definition()`
 
-BoGo is extensively tested with Python 3.2 and Python 3.3.
+BoGo is extensively tested with Python 2.7, Python 3.2 and Python 3.3.
 """
 
 )

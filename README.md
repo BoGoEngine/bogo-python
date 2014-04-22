@@ -4,7 +4,7 @@ BoGo
 [![Build Status](https://travis-ci.org/BoGoEngine/bogo-python.svg?branch=master)](https://travis-ci.org/BoGoEngine/bogo-python)
 [![Coverage Status](https://coveralls.io/repos/BoGoEngine/bogo-python/badge.png?branch=master)](https://coveralls.io/r/BoGoEngine/bogo-python?branch=master)
 
-BoGo is a Python 3 Vietnamese input method conversion library. This library
+BoGo is a Vietnamese input method conversion library for Python. This library
 is intentionally functional with no internal state and side-effect.
 
 Installation
@@ -42,4 +42,4 @@ Some functions from `bogo.core` are exported to package toplevel:
 - `get_telex_definition()`
 - `get_vni_definition()`
 
-BoGo is extensively tested with Python 3.2 and Python 3.3.
+BoGo is extensively tested with Python 2.7, Python 3.2 and Python 3.3.
