@@ -20,6 +20,11 @@
 # along with ibus-bogo.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+Utility functions to check whether a word looks like Vietnamese
+or not (i.e. can be pronounced by a Vietnamese speaker).
+"""
+
 from __future__ import unicode_literals
 import collections
 from bogo import accent, mark, utils

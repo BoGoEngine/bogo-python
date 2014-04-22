@@ -20,6 +20,12 @@
 # along with ibus-bogo.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+Utility functions to deal with accents (should have been called tones),
+which are diacritical markings that changes the pitch of a character.
+E.g. the acute accent in á.
+"""
+
 # TODO: add is_valid_accent() to be on par with mark.py and use it
 # at the end of new_bogo_engine.transform()
 

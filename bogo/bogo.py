@@ -20,6 +20,10 @@
 # along with ibus-bogo.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+Read the docstring for process_sequence() and process_key() first.
+"""
+
 from __future__ import unicode_literals
 from bogo.validation import is_valid_combination
 from bogo import utils, accent, mark
@@ -30,7 +34,7 @@ Mark = mark.Mark
 Accent = accent.Accent
 
 
-class Action:
+class _Action:
     UNDO = 3
     ADD_MARK = 2
     ADD_ACCENT = 1
@@ -93,7 +97,7 @@ def get_vni_definition():
     }
 
 
-def is_processable(comps):
+def _is_processable(comps):
     # For now only check the last 2 components
     return is_valid_combination(('', comps[1], comps[2]), final_form=False)
 
@@ -101,6 +105,13 @@ def is_processable(comps):
 def process_sequence(sequence,
                      rules=None,
                      skip_non_vietnamese=True):
+    """\
+    Convert a key sequence into a Vietnamese string with diacritical marks.
+
+    Args:
+        rules (optional): see docstring for process_key().
+        skip_non_vietnamese (optional): see docstring for process_key().
+    """
     result = ""
     raw = result
 
@@ -177,27 +188,27 @@ def process_key(string, key,
 
     comps = utils.separate(string)
 
-    # if not is_processable(comps):
+    # if not _is_processable(comps):
     #     return default_return()
 
     # Find all possible transformations this keypress can generate
-    trans_list = get_transformation_list(
+    trans_list = _get_transformation_list(
         key, rules, fallback_sequence)
 
     # Then apply them one by one
     new_comps = list(comps)
     for trans in trans_list:
-        new_comps = transform(new_comps, trans)
+        new_comps = _transform(new_comps, trans)
 
     if new_comps == comps:
         tmp = list(new_comps)
 
         # If none of the transformations (if any) work
         # then this keystroke is probably an undo key.
-        if can_undo(new_comps, trans_list):
+        if _can_undo(new_comps, trans_list):
             # The prefix "_" means undo.
             for trans in map(lambda x: "_" + x, trans_list):
-                new_comps = transform(new_comps, trans)
+                new_comps = _transform(new_comps, trans)
 
             # Undoing the w key with the TELEX input method with the
             # w:<ư extension requires some care.
@@ -205,9 +216,9 @@ def process_key(string, key,
             # The input (ư, w) should be undone as w
             # on the other hand, (ư, uw) should return uw.
             #
-            # transform() is not aware of the 2 ways to generate
+            # _transform() is not aware of the 2 ways to generate
             # ư in TELEX and always think ư was created by uw.
-            # Therefore, after calling transform() to undo ư,
+            # Therefore, after calling _transform() to undo ư,
             # we always get ['', 'u', ''].
             #
             # So we have to clean it up a bit.
@@ -251,14 +262,14 @@ def process_key(string, key,
     return result
 
 
-def get_transformation_list(key, im, fallback_sequence):
+def _get_transformation_list(key, im, fallback_sequence):
     """
-        Return the list of transformations inferred from the entered key. The
-        map between transform types and keys is given by module
-        bogo_config (if exists) or by variable simple_telex_im
+    Return the list of transformations inferred from the entered key. The
+    map between transform types and keys is given by module
+    bogo_config (if exists) or by variable simple_telex_im
 
-        if entered key is not in im, return "+key", meaning appending
-        the entered key to current text
+    if entered key is not in im, return "+key", meaning appending
+    the entered key to current text
     """
     # if key in im:
     #     lkey = key
@@ -282,7 +293,7 @@ def get_transformation_list(key, im, fallback_sequence):
                 # TODO Use takewhile()/dropwhile() to process the last IM keypress
                 # instead of assuming it's the last key in fallback_sequence.
                 t = list(map(lambda x: "_" + x,
-                             get_transformation_list(fallback_sequence[-2], im,
+                             _get_transformation_list(fallback_sequence[-2], im,
                                                      fallback_sequence[:-1])))
                 # print(t)
                 trans_list = t
@@ -294,61 +305,61 @@ def get_transformation_list(key, im, fallback_sequence):
         return ['+' + key]
 
 
-def get_action(trans):
+def _get_action(trans):
     """
     Return the action inferred from the transformation `trans`.
     and the parameter going with this action
-    An Action.ADD_MARK goes with a Mark
-    while an Action.ADD_ACCENT goes with an Accent
+    An _Action.ADD_MARK goes with a Mark
+    while an _Action.ADD_ACCENT goes with an Accent
     """
     # TODO: VIQR-like convention
     if trans[0] in ('<', '+'):
-        return Action.ADD_CHAR, trans[1]
+        return _Action.ADD_CHAR, trans[1]
     if trans[0] == "_":
-        return Action.UNDO, trans[1:]
+        return _Action.UNDO, trans[1:]
     if len(trans) == 2:
         if trans[1] == '^':
-            return Action.ADD_MARK, Mark.HAT
+            return _Action.ADD_MARK, Mark.HAT
         if trans[1] == '+':
-            return Action.ADD_MARK, Mark.BREVE
+            return _Action.ADD_MARK, Mark.BREVE
         if trans[1] == '*':
-            return Action.ADD_MARK, Mark.HORN
+            return _Action.ADD_MARK, Mark.HORN
         if trans[1] == "-":
-            return Action.ADD_MARK, Mark.BAR
+            return _Action.ADD_MARK, Mark.BAR
         # if trans[1] == "_":
-        #     return Action.ADD_MARK, Mark.NONE
+        #     return _Action.ADD_MARK, Mark.NONE
     else:
         if trans[0] == "\\":
-            return Action.ADD_ACCENT, Accent.GRAVE
+            return _Action.ADD_ACCENT, Accent.GRAVE
         if trans[0] == "/":
-            return Action.ADD_ACCENT, Accent.ACUTE
+            return _Action.ADD_ACCENT, Accent.ACUTE
         if trans[0] == "?":
-            return Action.ADD_ACCENT, Accent.HOOK
+            return _Action.ADD_ACCENT, Accent.HOOK
         if trans[0] == "~":
-            return Action.ADD_ACCENT, Accent.TIDLE
+            return _Action.ADD_ACCENT, Accent.TIDLE
         if trans[0] == ".":
-            return Action.ADD_ACCENT, Accent.DOT
+            return _Action.ADD_ACCENT, Accent.DOT
         # if trans[0] == "_":
-        #     return Action.ADD_ACCENT, Accent.NONE
+        #     return _Action.ADD_ACCENT, Accent.NONE
 
 
-def transform(comps, trans):
+def _transform(comps, trans):
     """
     Transform the given string with transform type trans
     """
-    logging.debug("== In transform(%s, %s) ==", comps, trans)
+    logging.debug("== In _transform(%s, %s) ==", comps, trans)
     components = list(comps)
 
-    action, parameter = get_action(trans)
-    if action == Action.ADD_MARK and \
+    action, parameter = _get_action(trans)
+    if action == _Action.ADD_MARK and \
             components[2] == "" and \
             mark.strip(components[1]).lower() in ['oe', 'oa'] and trans == "o^":
-        action, parameter = Action.ADD_CHAR, trans[0]
+        action, parameter = _Action.ADD_CHAR, trans[0]
 
-    if action == Action.ADD_ACCENT:
+    if action == _Action.ADD_ACCENT:
         logging.debug("add_accent(%s, %s)", components, parameter)
         components = accent.add_accent(components, parameter)
-    elif action == Action.ADD_MARK and mark.is_valid_mark(components, trans):
+    elif action == _Action.ADD_MARK and mark.is_valid_mark(components, trans):
         logging.debug("add_mark(%s, %s)", components, parameter)
         components = mark.add_mark(components, parameter)
 
@@ -367,7 +378,7 @@ def transform(comps, trans):
             components[1] = ("u", "U")[components[1][0].isupper()] + components[1][1]
             components = accent.add_accent(components, ac)
 
-    elif action == Action.ADD_CHAR:
+    elif action == _Action.ADD_CHAR:
         if trans[0] == "<":
             if not components[2]:
                 # Only allow ư, ơ or ươ sitting alone in the middle part
@@ -388,10 +399,10 @@ def transform(comps, trans):
                 components[1] = ('ư',  'Ư')[components[1][0].isupper()] + \
                     ('ơ', 'Ơ')[components[1][1].isupper()] + components[1][2:]
                 components = accent.add_accent(components, ac)
-    elif action == Action.UNDO:
-        components = reverse(components, trans[1:])
+    elif action == _Action.UNDO:
+        components = _reverse(components, trans[1:])
 
-    if action == Action.ADD_MARK or (action == Action.ADD_CHAR and parameter.isalpha()):
+    if action == _Action.ADD_MARK or (action == _Action.ADD_CHAR and parameter.isalpha()):
         # If there is any accent, remove and reapply it
         # because it is likely to be misplaced in previous transformations
         ac = accent.get_accent_string(components[1])
@@ -404,18 +415,18 @@ def transform(comps, trans):
     return components
 
 
-def reverse(components, trans):
+def _reverse(components, trans):
     """
     Reverse the effect of transformation 'trans' on 'components'
     If the transformation does not affect the components, return the original
     string.
     """
 
-    action, parameter = get_action(trans)
+    action, parameter = _get_action(trans)
     comps = list(components)
     string = utils.join(comps)
 
-    if action == Action.ADD_CHAR and string[-1].lower() == parameter.lower():
+    if action == _Action.ADD_CHAR and string[-1].lower() == parameter.lower():
         if comps[2]:
             i = 2
         elif comps[1]:
@@ -423,9 +434,9 @@ def reverse(components, trans):
         else:
             i = 0
         comps[i] = comps[i][:-1]
-    elif action == Action.ADD_ACCENT:
+    elif action == _Action.ADD_ACCENT:
         comps = accent.add_accent(comps, Accent.NONE)
-    elif action == Action.ADD_MARK:
+    elif action == _Action.ADD_MARK:
         if parameter == Mark.BAR:
             comps[0] = comps[0][:-1] + \
                 mark.add_mark_char(comps[0][-1:], Mark.NONE)
@@ -436,7 +447,7 @@ def reverse(components, trans):
     return comps
 
 
-def can_undo(comps, trans_list):
+def _can_undo(comps, trans_list):
     """
     Return whether a components can be undone with one of the transformation in
     trans_list.
@@ -444,16 +455,16 @@ def can_undo(comps, trans_list):
     comps = list(comps)
     accent_list = list(map(accent.get_accent_char, comps[1]))
     mark_list = list(map(mark.get_mark_char, utils.join(comps)))
-    action_list = list(map(lambda x: get_action(x), trans_list))
+    action_list = list(map(lambda x: _get_action(x), trans_list))
 
     def atomic_check(action):
         """
         Check if the `action` created one of the marks, accents, or characters
         in `comps`.
         """
-        return (action[0] == Action.ADD_ACCENT and action[1] in accent_list) \
-                or (action[0] == Action.ADD_MARK and action[1] in mark_list) \
-                or (action[0] == Action.ADD_CHAR and action[1] == \
+        return (action[0] == _Action.ADD_ACCENT and action[1] in accent_list) \
+                or (action[0] == _Action.ADD_MARK and action[1] in mark_list) \
+                or (action[0] == _Action.ADD_CHAR and action[1] == \
                     accent.remove_accent_char(comps[1][-1]))  # ơ, ư
 
     return any(map(atomic_check, action_list))

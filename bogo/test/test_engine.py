@@ -6,7 +6,7 @@ from nose.plugins.attrib import attr
 from functools import partial
 import codecs
 
-from bogo.bogo import Action, get_action, process_sequence
+from bogo.bogo import _Action, _get_action, process_sequence
 from bogo.mark import Mark
 import os
 
@@ -18,12 +18,12 @@ class TestHelpers():
     def test_transform(self):
         pass
 
-    def test_get_action(self):
+    def test__get_action(self):
         # Add mark
-        eq_(get_action('a^'), (Action.ADD_MARK, Mark.HAT))
-        eq_(get_action('a+'), (Action.ADD_MARK, Mark.BREVE))
-        eq_(get_action('o*'), (Action.ADD_MARK, Mark.HORN))
-        eq_(get_action('d-'), (Action.ADD_MARK, Mark.BAR))
+        eq_(_get_action('a^'), (_Action.ADD_MARK, Mark.HAT))
+        eq_(_get_action('a+'), (_Action.ADD_MARK, Mark.BREVE))
+        eq_(_get_action('o*'), (_Action.ADD_MARK, Mark.HORN))
+        eq_(_get_action('d-'), (_Action.ADD_MARK, Mark.BAR))
 
     def test_get_transformation_list(self):
         pass

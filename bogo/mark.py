@@ -20,6 +20,12 @@
 # along with ibus-bogo.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+Utility functions to deal with marks, which are diacritical markings
+to change the base sound of a character but not its tonal quality.
+E.g. the hat mark in â.
+"""
+
 from __future__ import unicode_literals
 
 from bogo import accent, utils
