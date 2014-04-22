@@ -5,7 +5,7 @@ from distutils.core import setup
 setup(
     name='bogo',
     packages=['bogo'],
-    version='1.0.0',
+    version='1.0.1',
     description='Library for implementing Vietnamese input method editors with a purely functional interface.',
     author='Trung Ngo',
     author_email='ndtrung4419@gmail.com',
