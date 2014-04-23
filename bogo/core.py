@@ -313,34 +313,29 @@ def _get_action(trans):
     while an _Action.ADD_ACCENT goes with an Accent
     """
     # TODO: VIQR-like convention
+    mark_action = {
+        '^': (_Action.ADD_MARK, Mark.HAT),
+        '+': (_Action.ADD_MARK, Mark.BREVE),
+        '*': (_Action.ADD_MARK, Mark.HORN),
+        '-': (_Action.ADD_MARK, Mark.BAR),
+    }
+
+    accent_action = {
+        '\\': (_Action.ADD_ACCENT, Accent.GRAVE),
+        '/': (_Action.ADD_ACCENT, Accent.ACUTE),
+        '?': (_Action.ADD_ACCENT, Accent.HOOK),
+        '~': (_Action.ADD_ACCENT, Accent.TIDLE),
+        '.': (_Action.ADD_ACCENT, Accent.DOT),
+    }
+
     if trans[0] in ('<', '+'):
         return _Action.ADD_CHAR, trans[1]
     if trans[0] == "_":
         return _Action.UNDO, trans[1:]
     if len(trans) == 2:
-        if trans[1] == '^':
-            return _Action.ADD_MARK, Mark.HAT
-        if trans[1] == '+':
-            return _Action.ADD_MARK, Mark.BREVE
-        if trans[1] == '*':
-            return _Action.ADD_MARK, Mark.HORN
-        if trans[1] == "-":
-            return _Action.ADD_MARK, Mark.BAR
-        # if trans[1] == "_":
-        #     return _Action.ADD_MARK, Mark.NONE
+        return mark_action[trans[1]]
     else:
-        if trans[0] == "\\":
-            return _Action.ADD_ACCENT, Accent.GRAVE
-        if trans[0] == "/":
-            return _Action.ADD_ACCENT, Accent.ACUTE
-        if trans[0] == "?":
-            return _Action.ADD_ACCENT, Accent.HOOK
-        if trans[0] == "~":
-            return _Action.ADD_ACCENT, Accent.TIDLE
-        if trans[0] == ".":
-            return _Action.ADD_ACCENT, Accent.DOT
-        # if trans[0] == "_":
-        #     return _Action.ADD_ACCENT, Accent.NONE
+        return accent_action[trans[0]]
 
 
 def _transform(comps, trans):
