@@ -314,20 +314,18 @@ def _get_action(trans):
     """
     # TODO: VIQR-like convention
     mark_action = {
-        '^': ( _Action.ADD_MARK, Mark.HAT),
-        '+': ( _Action.ADD_MARK, Mark.BREVE),
+        '^': (_Action.ADD_MARK, Mark.HAT),
+        '+': (_Action.ADD_MARK, Mark.BREVE),
         '*': (_Action.ADD_MARK, Mark.HORN),
         '-': (_Action.ADD_MARK, Mark.BAR),
-        '_': (_Action.ADD_MARK, Mark.NONE)
     }
 
     accent_action = {
-        '\\': ( _Action.ADD_ACCENT, Accent.GRAVE),
+        '\\': (_Action.ADD_ACCENT, Accent.GRAVE),
         '/': (_Action.ADD_ACCENT, Accent.ACUTE),
         '?': (_Action.ADD_ACCENT, Accent.HOOK),
-        '~': ( _Action.ADD_ACCENT, Accent.TIDLE),
+        '~': (_Action.ADD_ACCENT, Accent.TIDLE),
         '.': (_Action.ADD_ACCENT, Accent.DOT),
-        '_': (_Action.ADD_ACCENT, Accent.NONE)
     }
 
     if trans[0] in ('<', '+'):
