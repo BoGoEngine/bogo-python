@@ -6,7 +6,7 @@ sys.path.append(
 from gen_key_sequences import gen_key_sequences
 
 with \
-        open("vi-DauCu.dic") as dictionary, \
+        open("vi-DauCu.dic.filtered") as dictionary, \
         open("../DauCu.sequences", "w")  \
         as output:
 
