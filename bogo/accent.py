@@ -3,7 +3,7 @@
 # This file is part of ibus-bogo project.
 #
 # Copyright (C) 2012 Long T. Dam <longdt90@gmail.com>
-# Copyright (C) 2012-2013 Trung Ngo <ndtrung4419@gmail.com>
+# Copyright (C) 2012-2014 Trung Ngo <ndtrung4419@gmail.com>
 # Copyright (C) 2013 Duong H. Nguyen <cmpitg@gmail.com>
 #
 # ibus-bogo is free software: you can redistribute it and/or modify
@@ -21,7 +21,7 @@
 #
 
 """
-Utility functions to deal with accents (should have been called tones),
+Utility functions to deal with accents (also called tones),
 which are diacritical markings that changes the pitch of a character.
 E.g. the acute accent in á.
 """
@@ -31,9 +31,11 @@ E.g. the acute accent in á.
 
 from __future__ import unicode_literals
 from bogo import utils
+from bogo.syllable import Syllable
 
 
 class Accent:
+    MAX_VALUE = 6
     GRAVE = 5
     ACUTE = 4
     HOOK = 3
@@ -62,61 +64,65 @@ def get_accent_string(string):
     return accents[-1] if accents else Accent.NONE
 
 
-def add_accent(components, accent):
+def add_accent(syllable, accent):
     """
-    Add accent to the given components. The parameter components is
-    the result of function separate()
+    Add accent to the given syllable.
     """
-    vowel = components[1]
-    last_consonant = components[2]
+    vowel = syllable.vowel
+
+    if not vowel:
+        return syllable
+
     if accent == Accent.NONE:
         vowel = remove_accent_string(vowel)
-        return [components[0], vowel, last_consonant]
+        return Syllable(syllable.initial_consonant, vowel, syllable.final_consonant)
 
-    if vowel == "":
-        return components
-    #raw_string is a list, not a str object
-    raw_string = remove_accent_string(vowel).lower()
-    new_vowel = ""
+    vowel_wo_accent = remove_accent_string(vowel).lower()
+    new_vowel = ''
+    
     # Highest priority for ê and ơ
-    index = max(raw_string.find("ê"), raw_string.find("ơ"))
-    if index != -1:
-        new_vowel = vowel[:index] + add_accent_char(vowel[index], accent) + vowel[index+1:]
-    elif len(vowel) == 1 or (len(vowel) == 2 and last_consonant == ""):
-        new_vowel = add_accent_char(vowel[0], accent) + vowel[1:]
+    index = max(vowel_wo_accent.find("ê"), vowel_wo_accent.find("ơ"))
+    found_e_hat_or_o_horn = index != -1
+    
+    if found_e_hat_or_o_horn:
+        # Add accent mark to the found ê or ơ
+        new_vowel = \
+            vowel[:index] + \
+            add_accent_char(vowel[index], accent) + \
+            vowel[index + 1:]
+    elif len(vowel) == 1 or (len(vowel) == 2 and not syllable.final_consonant):
+        # cá
+        # cháo
+        first_vowel_char = vowel[0]
+        first_vowel_char_with_accent = add_accent_char(first_vowel_char, accent)
+        new_vowel = first_vowel_char_with_accent + vowel[1:]
     else:
-        new_vowel = vowel[:1] + add_accent_char(vowel[1], accent) + vowel[2:]
-    return [components[0], new_vowel, components[2]]
+        # biến
+        # khuỷu
+        second_vowel_char = vowel[1]
+        second_vowel_char_with_accent = add_accent_char(second_vowel_char, accent)
+        new_vowel = vowel[:1] + second_vowel_char_with_accent + vowel[2:]
+
+    return Syllable(syllable.initial_consonant, new_vowel, syllable.final_consonant)
 
 
+@utils.keep_case
 def add_accent_char(char, accent):
     """
-    Add accent to a single char.  Parameter accent is member of class
-    Accent
+    Add accent to a single char.
+    
+    Args:
+        accent: an Accent enum value
     """
-    if char == "":
-        return ""
-    case = char.isupper()
-    char = char.lower()
+    if not (char and accent in range(0, Accent.MAX_VALUE + 1)):
+        return char
+
     index = utils.VOWELS.find(char)
     if (index != -1):
         index = index - index % 6 + 5
         char = utils.VOWELS[index - accent]
-    return utils.change_case(char, case)
 
-
-def add_accent_at(string, accent, index):
-    """
-    Add mark to the index-th character of the given string.  Return
-    the new string after applying change.
-    (unused)
-    """
-    if index == -1:
-        return string
-    # Python can handle the case which index is out of range of given string
-    return string[:index] + \
-        accent.accent.add_accent_char(string[index], accent) + \
-        string[index+1:]
+    return char
 
 
 def remove_accent_char(char):
