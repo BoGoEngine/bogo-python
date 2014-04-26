@@ -129,3 +129,29 @@ def separate(string):
         comps[1] = comps[1][1:]
 
     return comps
+
+
+def keep_case(function):
+    """
+    Decorator to ensure that the letter case of the input and
+    output of a function stays the same.
+    
+    This function assumes that the decorated function takes
+    a string as the first argument and returns a modified
+    version of it. Also, the string argument will be normalized
+    to lower case before being passed to the decorated function.
+    """
+
+    def inner(string, *args, **kwargs):
+        restore_case = {
+            True: str.__str__,  # fallback if the string is empty
+            string.isupper(): str.upper,
+            string.islower(): str.lower,
+            string.istitle(): str.title
+        }[True]
+        
+        modified_string = function(string.lower(), *args, **kwargs)
+
+        return restore_case(modified_string)
+    
+    return inner
