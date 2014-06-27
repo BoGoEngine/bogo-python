@@ -37,34 +37,35 @@ Accent = accent.Accent
 # Think about words composed entirely of vowels, like 'yá'.
 # Perhaps let the user customize these lists?
 
-CONSONANTS = {
+CONSONANTS = set([
     'b', 'c', 'ch', 'd', 'g', 'gh', 'gi', 'h', 'k', 'kh', 'l', 'm', 'n', 'ng',
     'ngh', 'nh', 'p', 'ph', 'qu', 'r', 's', 't', 'th', 'tr', 'v', 'x', 'đ'
-}
+])
 
-TERMINAL_CONSONANTS = {
+TERMINAL_CONSONANTS = set([
     'c', 'ch', 'm', 'n', 'ng', 'nh', 'p', 't'
-}
+])
 
-VOWELS = {
+VOWELS = set([
     'a', 'ai', 'ao', 'au', 'ay', 'e', 'eo', 'i', 'ia', 'iu', 'iê', 'iêu',
     'o', 'oa', 'oai', 'oao', 'oay', 'oe', 'oeo', 'oi', 'oo', 'oă', 'u', 'ua',
     'ui', 'uy', 'uya', 'uyu', 'uyê', 'uâ', 'uây', 'uê', 'uô', 'uôi',
     'uơ', 'y', 'yê', 'yêu', 'â', 'âu', 'ây', 'ê', 'êu', 'ô', 'ôi',
     'ă', 'ơ', 'ơi', 'ư', 'ưa', 'ưi', 'ưu', 'ươ', 'ươi', 'ươu'
-}
+])
 
-TERMINAL_VOWELS = {
+TERMINAL_VOWELS = set([
     'ai', 'ao', 'au', 'ay', 'eo', 'ia', 'iu', 'iêu', 'oai', 'oao', 'oay',
     'oeo', 'oi', 'ua', 'ui', 'uya', 'uyu', 'uây', 'uôi', 'uơ', 'yêu', 'âu',
     'ây', 'êu', 'ôi', 'ơi', 'ưa', 'ưi', 'ưu', 'ươi', 'ươu'
-}
+])
 
 STRIPPED_VOWELS = set(map(mark.strip, VOWELS))
 
 # 'uo' may clash with 'ươ' and prevent typing 'thương'
 # 'ua' may clash with 'uâ' and prevent typing 'luật'
-STRIPPED_TERMINAL_VOWELS = set(map(mark.strip, TERMINAL_VOWELS)) - {'uo', 'ua'}
+STRIPPED_TERMINAL_VOWELS = set(map(mark.strip, TERMINAL_VOWELS)) - \
+    set(['uo', 'ua'])
 
 
 SoundTuple = \
@@ -152,17 +153,18 @@ def has_valid_vowel(sound_tuple):
     def has_valid_ch_ending():
         # 'ch' can only go after a, ê, uê, i, uy, oa
         return not (sound_tuple.last_consonant == 'ch' and
-                    not vowel_wo_accent in {'a', 'ê', 'uê', 'i', 'uy', 'oa'})
+                    not vowel_wo_accent in
+                    ('a', 'ê', 'uê', 'i', 'uy', 'oa'))
 
     def has_valid_c_ending():
         # 'c' can't go after 'i' or 'ơ'
         return not (sound_tuple.last_consonant == 'c' and
-                    vowel_wo_accent in {'i', 'ơ'})
+                    vowel_wo_accent in ('i', 'ơ'))
 
     def has_valid_ng_ending():
         # 'ng' can't go after i, ơ
         return not (sound_tuple.last_consonant == 'ng' and
-                    vowel_wo_accent in {'i', 'ơ'})
+                    vowel_wo_accent in ('i', 'ơ'))
 
     def has_valid_nh_ending():
         # 'nh' can only go after a, ê, uy, i, oa, quy
@@ -170,7 +172,7 @@ def has_valid_vowel(sound_tuple):
             sound_tuple.first_consonant != 'qu'
 
         has_invalid_vowel = not vowel_wo_accent in \
-            {'a', 'ê', 'i', 'uy', 'oa', 'uê', 'y'}
+            ('a', 'ê', 'i', 'uy', 'oa', 'uê', 'y')
 
         return not \
             (sound_tuple.last_consonant == 'nh' and
@@ -192,5 +194,5 @@ def has_valid_accent(sound_tuple):
     akzent = accent.get_accent_string(sound_tuple.vowel)
 
     # These consonants can only go with ACUTE, DOT accents
-    return not (sound_tuple.last_consonant in {'c', 'p', 't', 'ch'} and
-                not akzent in {Accent.ACUTE, Accent.DOT})
+    return not (sound_tuple.last_consonant in ('c', 'p', 't', 'ch') and
+                not akzent in (Accent.ACUTE, Accent.DOT))
