@@ -290,10 +290,6 @@ def _get_transformation_list(key, im, fallback_sequence):
     if entered key is not in im, return "+key", meaning appending
     the entered key to current text
     """
-    # if key in im:
-    #     lkey = key
-    # else:
-    #     lkey = key.lower()
     lkey = key.lower()
 
     if lkey in im:
