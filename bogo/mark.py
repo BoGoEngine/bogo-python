@@ -29,6 +29,7 @@ E.g. the hat mark in â.
 from __future__ import unicode_literals
 
 from bogo import accent, utils
+from bogo.syllable import Syllable
 Accent = accent.Accent
 
 
@@ -66,35 +67,44 @@ def get_mark_char(char):
 
 
 # TODO: Monstrous code. Needs refactoring.
-def add_mark(components, mark):
-    comp = list(components)
-    if mark == Mark.BAR and comp[0] and comp[0][-1].lower() in FAMILY_D:
-        comp[0] = add_mark_at(comp[0], len(comp[0])-1, Mark.BAR)
+def add_mark(syllable, mark):
+    new_initial_consonant, new_vowel, new_final_consonant = syllable
+
+    if mark == Mark.BAR and \
+            syllable.initial_consonant and \
+            syllable.initial_consonant[-1].lower() in FAMILY_D:
+        new_initial_consonant = add_mark_at(
+            syllable.initial_consonant,
+            len(syllable.initial_consonant) - 1,
+            Mark.BAR)
     else:
-        #remove all marks and accents in vowel part
-        raw_vowel = accent.add_accent(comp, Accent.NONE)[1].lower()
-        raw_vowel = utils.join([add_mark_char(c, Mark.NONE) for c in raw_vowel])
+        raw_vowel = strip(syllable.vowel)
         if mark == Mark.HAT:
             pos = max(raw_vowel.find("a"), raw_vowel.find("o"),
                       raw_vowel.find("e"))
-            comp[1] = add_mark_at(comp[1], pos, Mark.HAT)
+            new_vowel = add_mark_at(syllable.vowel, pos, Mark.HAT)
         elif mark == Mark.BREVE:
             if raw_vowel != "ua":
-                comp[1] = add_mark_at(comp[1], raw_vowel.find("a"), Mark.BREVE)
+                new_vowel = add_mark_at(
+                    syllable.vowel, raw_vowel.find("a"), Mark.BREVE)
         elif mark == Mark.HORN:
             if raw_vowel in ("uo", "uoi", "uou"):
-                comp[1] = utils.join([add_mark_char(c, Mark.HORN) for c in comp[1][:2]]) + comp[1][2:]
+                new_vowel = "".join(
+                    [add_mark_char(c, Mark.HORN) for c in syllable.vowel[:2]]) \
+                    + syllable.vowel[2:]
             elif raw_vowel == "oa":
-                comp[1] = add_mark_at(comp[1], 1, Mark.HORN)
+                new_vowel = add_mark_at(syllable.vowel, 1, Mark.HORN)
             else:
                 pos = max(raw_vowel.find(""), raw_vowel.find("o"))
-                comp[1] = add_mark_at(comp[1], pos, Mark.HORN)
+                new_vowel = add_mark_at(syllable.vowel, pos, Mark.HORN)
     if mark == Mark.NONE:
-        if not raw_vowel == comp[1].lower():
-            comp[1] = raw_vowel
-        elif comp[0] and comp[0][-1] == "đ":
-            comp[0] = comp[0][:-1] + "d"
-    return comp
+        if not raw_vowel == syllable.vowel.lower():
+            new_vowel = raw_vowel
+        elif syllable.initial_consonant and \
+                syllable.initial_consonant[-1] == "đ":
+            new_initial_consonant = syllable.initial_consonant[:-1] + "d"
+
+    return Syllable(new_initial_consonant, new_vowel, new_final_consonant)
 
 
 def add_mark_at(string, index, mark):

@@ -26,8 +26,8 @@ Read the docstring for process_sequence() and process_key() first.
 
 from __future__ import unicode_literals
 from bogo.validation import is_valid_combination
+from bogo.syllable import Syllable
 from bogo import utils, accent, mark
-import logging
 import sys
 import string
 
@@ -204,37 +204,30 @@ def process_key(string, key,
     effect strings. Although you should try to avoid this if
     you are defining a custom input method rule.
     """
-    # TODO Figure out a way to remove the `string` argument. Perhaps only the
-    #      key sequence is needed?
-    def default_return():
-        return string + key, fallback_sequence + key
 
     if rules is None:
         rules = get_telex_definition()
 
-    comps = utils.separate(string)
-
-    # if not _is_processable(comps):
-    #     return default_return()
+    syl = Syllable.new_from_string(string)
 
     # Find all possible transformations this keypress can generate
     trans_list = _get_transformation_list(
         key, rules, fallback_sequence)
 
     # Then apply them one by one
-    new_comps = list(comps)
+    new_syl = syl
     for trans in trans_list:
-        new_comps = _transform(new_comps, trans)
+        new_syl = _transform(new_syl, trans)
 
-    if new_comps == comps:
-        tmp = list(new_comps)
+    if new_syl == syl:
+        tmp = new_syl
 
         # If none of the transformations (if any) work
         # then this keystroke is probably an undo key.
-        if _can_undo(new_comps, trans_list):
+        if _can_undo(new_syl, trans_list):
             # The prefix "_" means undo.
             for trans in map(lambda x: "_" + x, trans_list):
-                new_comps = _transform(new_comps, trans)
+                new_syl = _transform(new_syl, trans)
 
             # Undoing the w key with the TELEX input method with the
             # w:<ư extension requires some care.
@@ -252,7 +245,7 @@ def process_key(string, key,
                 return '<ư' in rules["w"]
 
             def undone_vowel_ends_with_u():
-                return new_comps[1] and new_comps[1][-1].lower() == "u"
+                return new_syl[1] and new_syl[1][-1].lower() == "u"
 
             def not_first_key_press():
                 return len(fallback_sequence) >= 1
@@ -269,21 +262,21 @@ def process_key(string, key,
                     undone_vowel_ends_with_u() and \
                     user_typed_ww() and \
                     user_didnt_type_uww():
-                # The vowel part of new_comps is supposed to end with
+                # The vowel part of new_syl is supposed to end with
                 # u now. That u should be removed.
-                new_comps[1] = new_comps[1][:-1]
+                new_syl[1] = new_syl[1][:-1]
 
-        if tmp == new_comps:
+        if tmp == new_syl:
             fallback_sequence += key
-        new_comps = utils.append_comps(new_comps, key)
+        new_syl = utils.append_comps(new_syl, key)
     else:
         fallback_sequence += key
 
     if skip_non_vietnamese is True and key.isalpha() and \
-            not is_valid_combination(new_comps, final_form=False):
+            not is_valid_combination(new_syl, final_form=False):
         result = fallback_sequence, fallback_sequence
     else:
-        result = utils.join(new_comps), fallback_sequence
+        result = new_syl.as_string(), fallback_sequence
 
     return result
 
@@ -364,25 +357,22 @@ def _get_action(trans):
         return accent_action[trans[0]]
 
 
-def _transform(comps, trans):
+def _transform(syllable, trans):
     """
     Transform the given string with transform type trans
     """
-    logging.debug("== In _transform(%s, %s) ==", comps, trans)
-    components = list(comps)
 
     action, parameter = _get_action(trans)
     if action == _Action.ADD_MARK and \
-            components[2] == "" and \
-            mark.strip(components[1]).lower() in ['oe', 'oa'] and trans == "o^":
+            syllable.final_consonant == "" and \
+            mark.strip(syllable.vowel).lower() in ['oe', 'oa'] and \
+            trans == "o^":
         action, parameter = _Action.ADD_CHAR, trans[0]
 
     if action == _Action.ADD_ACCENT:
-        logging.debug("add_accent(%s, %s)", components, parameter)
-        components = accent.add_accent(components, parameter)
-    elif action == _Action.ADD_MARK and mark.is_valid_mark(components, trans):
-        logging.debug("add_mark(%s, %s)", components, parameter)
-        components = mark.add_mark(components, parameter)
+        syllable = accent.add_accent(syllable, parameter)
+    elif action == _Action.ADD_MARK and mark.is_valid_mark(syllable, trans):
+        syllable = mark.add_mark(syllable, parameter)
 
         # Handle uơ in "huơ", "thuở", "quở"
         # If the current word has no last consonant and the first consonant
@@ -392,48 +382,39 @@ def _transform(comps, trans):
         #
         # NOTE: In the dictionary, these are the only words having this strange
         # vowel so we don't need to worry about other cases.
-        if accent.remove_accent_string(components[1]).lower() == "ươ" and \
-                not components[2] and components[0].lower() in ["", "h", "th", "kh"]:
+        if accent.remove_accent_string(syllable.vowel).lower() == "ươ" and \
+                not syllable.final_consonant and \
+                syllable.initial_consonant.lower() in ["", "h", "th", "kh"]:
             # Backup accents
-            ac = accent.get_accent_string(components[1])
-            components[1] = ("u", "U")[components[1][0].isupper()] + components[1][1]
-            components = accent.add_accent(components, ac)
+            akzent = accent.get_accent_string(syllable.vowel)
+            syllable = Syllable(
+                syllable.initial_consonant,
+                mark.strip(syllable.vowel[0]) + syllable.vowel[1])
+            syllable = accent.add_accent(syllable, akzent)
 
     elif action == _Action.ADD_CHAR:
-        if trans[0] == "<":
-            if not components[2]:
-                # Only allow ư, ơ or ươ sitting alone in the middle part
-                # and ['g', 'i', '']. If we want to type giowf = 'giờ', separate()
-                # will create ['g', 'i', '']. Therefore we have to allow
-                # components[1] == 'i'.
-                if (components[0].lower(), components[1].lower()) == ('g', 'i'):
-                    components[0] += components[1]
-                    components[1] = ''
-                if not components[1] or \
-                        (components[1].lower(), trans[1].lower()) == ('ư', 'ơ'):
-                    components[1] += trans[1]
-        else:
-            components = utils.append_comps(components, parameter)
-            if parameter.isalpha() and \
-                    accent.remove_accent_string(components[1]).lower().startswith("uơ"):
-                ac = accent.get_accent_string(components[1])
-                components[1] = ('ư',  'Ư')[components[1][0].isupper()] + \
-                    ('ơ', 'Ơ')[components[1][1].isupper()] + components[1][2:]
-                components = accent.add_accent(components, ac)
+        syllable = syllable.append_char(parameter)
+        if parameter.isalpha() and \
+                accent.remove_accent_string(syllable.vowel) \
+                .lower().startswith("uơ"):
+            ac = accent.get_accent_string(syllable.vowel)
+            # components[1] = ('ư',  'Ư')[components[1][0].isupper()] + \
+            #     ('ơ', 'Ơ')[components[1][1].isupper()] + components[1][2:]
+            # components = accent.add_accent(components, ac)
     elif action == _Action.UNDO:
-        components = _reverse(components, trans[1:])
+        syllable = _reverse(syllable, trans[1:])
 
-    if action == _Action.ADD_MARK or (action == _Action.ADD_CHAR and parameter.isalpha()):
+    if action == _Action.ADD_MARK or \
+            (action == _Action.ADD_CHAR and parameter.isalpha()):
         # If there is any accent, remove and reapply it
         # because it is likely to be misplaced in previous transformations
-        ac = accent.get_accent_string(components[1])
+        akzent = accent.get_accent_string(syllable.vowel)
 
-        if ac != accent.Accent.NONE:
-            components = accent.add_accent(components, Accent.NONE)
-            components = accent.add_accent(components, ac)
+        if akzent != accent.Accent.NONE:
+            syllable = accent.add_accent(syllable, Accent.NONE)
+            syllable = accent.add_accent(syllable, ac)
 
-    logging.debug("After transform: %s", components)
-    return components
+    return syllable
 
 
 def _reverse(components, trans):
@@ -468,14 +449,13 @@ def _reverse(components, trans):
     return comps
 
 
-def _can_undo(comps, trans_list):
+def _can_undo(syllable, trans_list):
     """
     Return whether a components can be undone with one of the transformation in
     trans_list.
     """
-    comps = list(comps)
-    accent_list = list(map(accent.get_accent_char, comps[1]))
-    mark_list = list(map(mark.get_mark_char, utils.join(comps)))
+    accent_list = list(map(accent.get_accent_char, syllable.vowel))
+    mark_list = list(map(mark.get_mark_char, syllable.as_string()))
     action_list = list(map(lambda x: _get_action(x), trans_list))
 
     def atomic_check(action):
@@ -484,8 +464,8 @@ def _can_undo(comps, trans_list):
         in `comps`.
         """
         return (action[0] == _Action.ADD_ACCENT and action[1] in accent_list) \
-                or (action[0] == _Action.ADD_MARK and action[1] in mark_list) \
-                or (action[0] == _Action.ADD_CHAR and action[1] == \
-                    accent.remove_accent_char(comps[1][-1]))  # ơ, ư
+            or (action[0] == _Action.ADD_MARK and action[1] in mark_list) \
+            or (action[0] == _Action.ADD_CHAR and action[1] ==
+                accent.remove_accent_char(syllable.vowel[-1]))  # ơ, ư
 
     return any(map(atomic_check, action_list))

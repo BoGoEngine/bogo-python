@@ -46,6 +46,8 @@ class Syllable(collections.namedtuple('Syllable',
 
         return Syllable(first_consonant, vowel, last_consonant)
 
+    def as_string(self):
+        return self.initial_consonant + self.vowel + self.final_consonant
 
     def append_char(self, char):
         """
