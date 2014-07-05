@@ -268,7 +268,7 @@ def process_key(string, key,
 
         if tmp == new_syl:
             fallback_sequence += key
-        new_syl = utils.append_comps(new_syl, key)
+        new_syl = new_syl.append_char(key)
     else:
         fallback_sequence += key
 
