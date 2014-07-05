@@ -168,10 +168,17 @@ class TestAddMark():
         eq_(add_mark_at('e', 0, Mark.HAT), 'ê')
 
     def test_add_mark(self):
-        eq_(add_mark(['d', 'uo', 'ng'], Mark.BAR), ['đ', 'uo', 'ng'])
-        eq_(add_mark(['d', 'uo', 'ng'], Mark.HORN), ['d', 'ươ', 'ng'])
-        eq_(add_mark(['d', 'uô', 'ng'], Mark.HORN), ['d', 'ươ', 'ng'])
-        eq_(add_mark(['d', 'Á', ''], Mark.HAT), ['d', 'Ấ', ''])
-        eq_(add_mark(['d', '', ''], Mark.BAR), ['đ', '', ''])
-        eq_(add_mark(['D', 'uo', 'ng'], Mark.BAR), ['Đ', 'uo', 'ng'])
-        eq_(add_mark(['d', 'e', ''], Mark.HAT), ['d', 'ê', ''])
+        eq_(add_mark(Syllable('d', 'uo', 'ng'), Mark.BAR),
+            Syllable('đ', 'uo', 'ng'))
+        eq_(add_mark(Syllable('d', 'uo', 'ng'), Mark.HORN),
+            Syllable('d', 'ươ', 'ng'))
+        eq_(add_mark(Syllable('d', 'uô', 'ng'), Mark.HORN),
+            Syllable('d', 'ươ', 'ng'))
+        eq_(add_mark(Syllable('d', 'Á', ''), Mark.HAT),
+            Syllable('d', 'Ấ', ''))
+        eq_(add_mark(Syllable('d', '', ''), Mark.BAR),
+            Syllable('đ', '', ''))
+        eq_(add_mark(Syllable('D', 'uo', 'ng'), Mark.BAR),
+            Syllable('Đ', 'uo', 'ng'))
+        eq_(add_mark(Syllable('d', 'e', ''), Mark.HAT),
+            Syllable('d', 'ê', ''))

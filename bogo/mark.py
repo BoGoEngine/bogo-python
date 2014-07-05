@@ -78,7 +78,7 @@ def add_mark(syllable, mark):
             len(syllable.initial_consonant) - 1,
             Mark.BAR)
     else:
-        raw_vowel = strip(syllable.vowel)
+        raw_vowel = strip(syllable.vowel).lower()
         if mark == Mark.HAT:
             pos = max(raw_vowel.find("a"), raw_vowel.find("o"),
                       raw_vowel.find("e"))
