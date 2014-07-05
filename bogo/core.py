@@ -320,7 +320,7 @@ def _get_transformation_list(key, im, fallback_sequence):
         return ['+' + key]
 
 
-def _get_action(trans):
+def _parse_transformation(trans):
     """
     Return the action inferred from the transformation `trans`.
     and the parameter going with this action
@@ -358,7 +358,7 @@ def _transform(syllable, trans):
     Transform the given string with transform type trans
     """
 
-    action, parameter = _get_action(trans)
+    action, parameter = _parse_transformation(trans)
     if action == _Action.ADD_MARK and \
             syllable.final_consonant == "" and \
             mark.strip(syllable.vowel).lower() in ['oe', 'oa'] and \
@@ -420,7 +420,7 @@ def _reverse(components, trans):
     string.
     """
 
-    action, parameter = _get_action(trans)
+    action, parameter = _parse_transformation(trans)
     comps = list(components)
     string = utils.join(comps)
 
@@ -452,7 +452,7 @@ def _can_undo(syllable, trans_list):
     """
     accent_list = list(map(accent.get_accent_char, syllable.vowel))
     mark_list = list(map(mark.get_mark_char, syllable.as_string()))
-    action_list = list(map(lambda x: _get_action(x), trans_list))
+    action_list = list(map(lambda x: _parse_transformation(x), trans_list))
 
     def atomic_check(action):
         """
