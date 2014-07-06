@@ -127,7 +127,7 @@ def process_sequence(sequence,
     i.e. process_sequence('con meof.ddieen') should work.
     """
     result = ""
-    result_parts = []
+    result_chunks = []
     if rules is None:
         rules = get_telex_definition()
 
@@ -137,14 +137,14 @@ def process_sequence(sequence,
 
     for key in sequence:
         if key not in accepted_chars:
-            result_parts.append(result)
-            result_parts.append(key)
+            result_chunks.append(result)
+            result_chunks.append(key)
             result = ""
         else:
             result = bg.add_key(key)
 
-    result_parts.append(result)
-    return ''.join(result_parts)
+    result_chunks.append(result)
+    return ''.join(result_chunks)
 
 
 class Transformation:
