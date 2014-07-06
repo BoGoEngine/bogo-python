@@ -25,7 +25,6 @@ Read `help(bogo.core)` for more help.
 """
 
 from bogo.core import \
-    process_key, \
     process_sequence, \
     get_telex_definition, \
     get_vni_definition

@@ -55,11 +55,11 @@ def get_telex_definition(w_shorthand=True, brackets_shorthand=True):
     Returns a dictionary to be passed into process_key().
     """
     telex = {
-        "a": "a^",
-        "o": "o^",
-        "e": "e^",
-        "w": ["u*", "o*", "a+"],
-        "d": "d-",
+        "a": "^",
+        "o": "^",
+        "e": "^",
+        "w": ["*", "("],
+        "d": "-",
         "f": "\\",
         "s": "/",
         "r": "?",
@@ -127,341 +127,142 @@ def process_sequence(sequence,
     i.e. process_sequence('con meof.ddieen') should work.
     """
     result = ""
-    raw = result
     result_parts = []
     if rules is None:
         rules = get_telex_definition()
 
     accepted_chars = _accepted_chars(rules)
+    rules = Rule(rules)
+    bg = BoGo(rules)
 
     for key in sequence:
         if key not in accepted_chars:
             result_parts.append(result)
             result_parts.append(key)
             result = ""
-            raw = ""
         else:
-            result, raw = process_key(
-                string=result,
-                key=key,
-                fallback_sequence=raw,
-                rules=rules,
-                skip_non_vietnamese=skip_non_vietnamese)
+            result = bg.add_key(key)
 
     result_parts.append(result)
     return ''.join(result_parts)
 
 
-def process_key(string, key,
-                fallback_sequence="", rules=None,
-                skip_non_vietnamese=True):
-    """Process a keystroke.
+class Transformation:
 
-    Args:
-        string: The previously processed string or "".
-        key: The keystroke.
-        fallback_sequence: The previous keystrokes.
-        rules (optional): A dictionary listing
-            transformation rules. Defaults to get_telex_definition().
-        skip_non_vietnamese (optional): Whether to skip results that
-            doesn't seem like Vietnamese. Defaults to True.
+    def __init__(self, key):
+        self.key = key
 
-    Returns a tuple. The first item of which is the processed
-    Vietnamese string, the second item is the next fallback sequence.
-    The two items are to be fed back into the next call of process_key()
-    as `string` and `fallback_sequence`. If `skip_non_vietnamese` is
-    True and the resulting string doesn't look like Vietnamese,
-    both items contain the `fallback_sequence`.
-
-    >>> process_key('a', 'a', 'a')
-    (â, aa)
-
-    Note that when a key is an undo key, it won't get appended to
-    `fallback_sequence`.
-
-    >>> process_key('â', 'a', 'aa')
-    (aa, aa)
-
-    `rules` is a dictionary that maps keystrokes to
-    their effect string. The effects can be one of the following:
-
-    'a^': a with circumflex (â), only affect an existing 'a family'
-    'a+': a with breve (ă), only affect an existing 'a family'
-    'e^': e with circumflex (ê), only affect an existing 'e family'
-    'o^': o with circumflex (ô), only affect an existing 'o family'
-    'o*': o with horn (ơ), only affect an existing 'o family'
-    'd-': d with bar (đ), only affect an existing 'd'
-    '/': acute (sắc), affect an existing vowel
-    '\': grave (huyền), affect an existing vowel
-    '?': hook (hỏi), affect an existing vowel
-    '~': tilde (ngã), affect an existing vowel
-    '.': dot (nặng), affect an existing vowel
-    '<ư': append ư
-    '<ơ': append ơ
-
-    A keystroke entry can have multiple effects, in which case the
-    dictionary entry's value should be a list of the possible
-    effect strings. Although you should try to avoid this if
-    you are defining a custom input method rule.
-    """
-
-    if rules is None:
-        rules = get_telex_definition()
-
-    syl = Syllable.new_from_string(string)
-
-    # Find all possible transformations this keypress can generate
-    trans_list = _get_transformation_list(
-        key, rules, fallback_sequence)
-
-    # Then apply them one by one
-    new_syl = syl
-    for trans in trans_list:
-        new_syl = _transform(new_syl, trans)
-
-    if new_syl == syl:
-        tmp = new_syl
-
-        # If none of the transformations (if any) work
-        # then this keystroke is probably an undo key.
-        if _can_undo(new_syl, trans_list):
-            # The prefix "_" means undo.
-            for trans in map(lambda x: "_" + x, trans_list):
-                new_syl = _transform(new_syl, trans)
-
-            # Undoing the w key with the TELEX input method with the
-            # w:<ư extension requires some care.
-            #
-            # The input (ư, w) should be undone as w
-            # on the other hand, (ư, uw) should return uw.
-            #
-            # _transform() is not aware of the 2 ways to generate
-            # ư in TELEX and always think ư was created by uw.
-            # Therefore, after calling _transform() to undo ư,
-            # we always get ['', 'u', ''].
-            #
-            # So we have to clean it up a bit.
-            def is_telex_like():
-                return '<ư' in rules["w"]
-
-            def undone_vowel_ends_with_u():
-                return new_syl[1] and new_syl[1][-1].lower() == "u"
-
-            def not_first_key_press():
-                return len(fallback_sequence) >= 1
-
-            def user_typed_ww():
-                return (fallback_sequence[-1:]+key).lower() == "ww"
-
-            def user_didnt_type_uww():
-                return not (len(fallback_sequence) >= 2 and
-                            fallback_sequence[-2].lower() == "u")
-
-            if is_telex_like() and \
-                    not_first_key_press() and \
-                    undone_vowel_ends_with_u() and \
-                    user_typed_ww() and \
-                    user_didnt_type_uww():
-                # The vowel part of new_syl is supposed to end with
-                # u now. That u should be removed.
-                new_syl[1] = new_syl[1][:-1]
-
-        if tmp == new_syl:
-            fallback_sequence += key
-        new_syl = new_syl.append_char(key)
-    else:
-        fallback_sequence += key
-
-    if skip_non_vietnamese is True and key.isalpha() and \
-            not is_valid_combination(new_syl, final_form=False):
-        result = fallback_sequence, fallback_sequence
-    else:
-        result = new_syl.as_string(), fallback_sequence
-
-    return result
+    def perform(self, syllable):
+        raise NotImplementedError
 
 
-def _get_transformation_list(key, im, fallback_sequence):
-    """
-    Return the list of transformations inferred from the entered key. The
-    map between transform types and keys is given by module
-    bogo_config (if exists) or by variable simple_telex_im
+class AddCharTransformation(Transformation):
+    def __init__(self, key, char):
+        super(AddCharTransformation, self).__init__(key)
+        self.char = char
 
-    if entered key is not in im, return "+key", meaning appending
-    the entered key to current text
-    """
-    lkey = key.lower()
-
-    if lkey in im:
-        if isinstance(im[lkey], list):
-            trans_list = im[lkey]
-        else:
-            trans_list = [im[lkey]]
-
-        for i, trans in enumerate(trans_list):
-            if trans[0] == '<' and key.isalpha():
-                trans_list[i] = trans[0] + \
-                    utils.change_case(trans[1], int(key.isupper()))
-
-        if trans_list == ['_']:
-            if len(fallback_sequence) >= 2:
-                # TODO Use takewhile()/dropwhile() to process the last IM keypress
-                # instead of assuming it's the last key in fallback_sequence.
-                t = list(map(lambda x: "_" + x,
-                             _get_transformation_list(fallback_sequence[-2], im,
-                                                     fallback_sequence[:-1])))
-                # print(t)
-                trans_list = t
-            # else:
-            #     trans_list = ['+' + key]
-
-        return trans_list
-    else:
-        return ['+' + key]
+    def perform(self, syllable):
+        return syllable.append_char(self.char)
 
 
-def _parse_transformation(trans):
-    """
-    Return the action inferred from the transformation `trans`.
-    and the parameter going with this action
-    An _Action.ADD_MARK goes with a Mark
-    while an _Action.ADD_ACCENT goes with an Accent
-    """
-    # TODO: VIQR-like convention
+class AddToneMarkTransformation(Transformation):
+    def __init__(self, key, tone):
+        super(AddToneMarkTransformation, self).__init__(key)
+        self.tone = tone
+
+    def perform(self, syllable):
+        return accent.add_accent(syllable, self.tone)
+
+
+class AddCharMarkTransformation(Transformation):
+    def __init__(self, key, mark):
+        super(AddCharMarkTransformation, self).__init__(key)
+        self.mark = mark
+
+    def perform(self, syllable):
+        return mark.add_mark(syllable, self.mark)
+
+
+class Rule:
     mark_action = {
-        '^': (_Action.ADD_MARK, Mark.HAT),
-        '+': (_Action.ADD_MARK, Mark.BREVE),
-        '*': (_Action.ADD_MARK, Mark.HORN),
-        '-': (_Action.ADD_MARK, Mark.BAR),
+        '^': Mark.HAT,
+        '(': Mark.BREVE,
+        '*': Mark.HORN,
+        '-': Mark.BAR,
     }
 
     accent_action = {
-        '\\': (_Action.ADD_ACCENT, Accent.GRAVE),
-        '/': (_Action.ADD_ACCENT, Accent.ACUTE),
-        '?': (_Action.ADD_ACCENT, Accent.HOOK),
-        '~': (_Action.ADD_ACCENT, Accent.TIDLE),
-        '.': (_Action.ADD_ACCENT, Accent.DOT),
+        '\\': Accent.GRAVE,
+        '/': Accent.ACUTE,
+        '?': Accent.HOOK,
+        '~': Accent.TIDLE,
+        '.': Accent.DOT,
     }
 
-    if trans[0] in ('<', '+'):
-        return _Action.ADD_CHAR, trans[1]
-    if trans[0] == "_":
-        return _Action.UNDO, trans[1:]
-    if len(trans) == 2:
-        return mark_action[trans[1]]
-    else:
-        return accent_action[trans[0]]
+    def __init__(self, rule_dict):
+        self.rule_dict = rule_dict
 
+    @staticmethod
+    def parse_rule_action(rule_action, key):
+        # Each typing rule consists of 2 parts: a predicate and
+        # an action associated with that predicate.
+        # e.g.: In the rule 'r -> ?', 'r' is the key, the predicate,
+        #       and ? is the action (add a HOOK tone mark to the
+        #       suitable vowel).
 
-def _transform(syllable, trans):
-    """
-    Transform the given string with transform type trans
-    """
-
-    action, parameter = _parse_transformation(trans)
-    if action == _Action.ADD_MARK and \
-            syllable.final_consonant == "" and \
-            mark.strip(syllable.vowel).lower() in ['oe', 'oa'] and \
-            trans == "o^":
-        action, parameter = _Action.ADD_CHAR, trans[0]
-
-    if action == _Action.ADD_ACCENT:
-        syllable = accent.add_accent(syllable, parameter)
-    elif action == _Action.ADD_MARK and mark.is_valid_mark(syllable, trans):
-        syllable = mark.add_mark(syllable, parameter)
-
-        # Handle uơ in "huơ", "thuở", "quở"
-        # If the current word has no last consonant and the first consonant
-        # is one of "h", "th" and the vowel is "ươ" then change the vowel into
-        # "uơ", keeping case and accent. If an alphabet character is then added
-        # into the word then change back to "ươ".
-        #
-        # NOTE: In the dictionary, these are the only words having this strange
-        # vowel so we don't need to worry about other cases.
-        if accent.remove_accent_string(syllable.vowel).lower() == "ươ" and \
-                not syllable.final_consonant and \
-                syllable.initial_consonant.lower() in ["", "h", "th", "kh"]:
-            # Backup accents
-            akzent = accent.get_accent_string(syllable.vowel)
-            syllable = Syllable(
-                syllable.initial_consonant,
-                mark.strip(syllable.vowel[0]) + syllable.vowel[1])
-            syllable = accent.add_accent(syllable, akzent)
-
-    elif action == _Action.ADD_CHAR:
-        syllable = syllable.append_char(parameter)
-        if parameter.isalpha() and \
-                accent.remove_accent_string(syllable.vowel) \
-                .lower().startswith("uơ"):
-            ac = accent.get_accent_string(syllable.vowel)
-            # components[1] = ('ư',  'Ư')[components[1][0].isupper()] + \
-            #     ('ơ', 'Ơ')[components[1][1].isupper()] + components[1][2:]
-            # components = accent.add_accent(components, ac)
-    elif action == _Action.UNDO:
-        syllable = _reverse(syllable, trans[1:])
-
-    if action == _Action.ADD_MARK or \
-            (action == _Action.ADD_CHAR and parameter.isalpha()):
-        # If there is any accent, remove and reapply it
-        # because it is likely to be misplaced in previous transformations
-        akzent = accent.get_accent_string(syllable.vowel)
-
-        if akzent != accent.Accent.NONE:
-            syllable = accent.add_accent(syllable, Accent.NONE)
-            syllable = accent.add_accent(syllable, ac)
-
-    return syllable
-
-
-def _reverse(components, trans):
-    """
-    Reverse the effect of transformation 'trans' on 'components'
-    If the transformation does not affect the components, return the original
-    string.
-    """
-
-    action, parameter = _parse_transformation(trans)
-    comps = list(components)
-    string = utils.join(comps)
-
-    if action == _Action.ADD_CHAR and string[-1].lower() == parameter.lower():
-        if comps[2]:
-            i = 2
-        elif comps[1]:
-            i = 1
+        if rule_action[0] == '<':
+            # <ư
+            trans = AddCharTransformation(key, rule_action[1])
+        # elif rule_action[0] == "_":
+        #     # _a^
+        #     trans = Transformation(_Action.UNDO, rule_action[1:])
+        elif rule_action in Rule.mark_action:
+            # ^
+            trans = AddCharMarkTransformation(
+                key, Rule.mark_action[rule_action])
+        elif rule_action in Rule.accent_action:
+            # ?
+            trans = AddToneMarkTransformation(
+                key, Rule.accent_action[rule_action])
         else:
-            i = 0
-        comps[i] = comps[i][:-1]
-    elif action == _Action.ADD_ACCENT:
-        comps = accent.add_accent(comps, Accent.NONE)
-    elif action == _Action.ADD_MARK:
-        if parameter == Mark.BAR:
-            comps[0] = comps[0][:-1] + \
-                mark.add_mark_char(comps[0][-1:], Mark.NONE)
+            # TODO ?
+            raise ValueError
+
+        if type(trans) is AddCharTransformation:
+            if key.isupper():
+                trans.key = trans.key.toupper()
+
+        return trans
+
+    def transformations_from_key(self, key):
+        if key in self.rule_dict:
+            return [self.parse_rule_action(rule_action, key)
+                    for rule_action in self.rule_dict[key]]
         else:
-            if mark.is_valid_mark(comps, trans):
-                comps[1] = "".join([mark.add_mark_char(c, Mark.NONE)
-                                    for c in comps[1]])
-    return comps
+            return [AddCharTransformation(key, key)]
 
 
-def _can_undo(syllable, trans_list):
-    """
-    Return whether a components can be undone with one of the transformation in
-    trans_list.
-    """
-    accent_list = list(map(accent.get_accent_char, syllable.vowel))
-    mark_list = list(map(mark.get_mark_char, syllable.as_string()))
-    action_list = list(map(lambda x: _parse_transformation(x), trans_list))
+class BoGo:
+    def __init__(self, typing_rule):
+        self.rule = typing_rule
+        self.transformations = []
+        self.syllable = Syllable('', '', '')
 
-    def atomic_check(action):
-        """
-        Check if the `action` created one of the marks, accents, or characters
-        in `comps`.
-        """
-        return (action[0] == _Action.ADD_ACCENT and action[1] in accent_list) \
-            or (action[0] == _Action.ADD_MARK and action[1] in mark_list) \
-            or (action[0] == _Action.ADD_CHAR and action[1] ==
-                accent.remove_accent_char(syllable.vowel[-1]))  # ơ, ư
+    def raw_string(self):
+        "".join([trans.key for trans in self.transformations])
 
-    return any(map(atomic_check, action_list))
+    def result(self):
+        return self.syllable.as_string()
+
+    def best_transformation(self, transformations):
+        return transformations[0]
+
+    def add_key(self, key):
+        transformation = self.best_transformation(
+            self.rule.transformations_from_key(key))
+
+        self.syllable = transformation.perform(self.syllable)
+        self.transformations.append(transformation)
+
+        return self.syllable.as_string()
+
