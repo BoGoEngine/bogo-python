@@ -249,7 +249,7 @@ class BoGo:
         self.syllable = Syllable('', '', '')
 
     def raw_string(self):
-        "".join([trans.key for trans in self.transformations])
+        return "".join([trans.key for trans in self.transformations])
 
     def result(self):
         return self.syllable.as_string()
@@ -265,4 +265,3 @@ class BoGo:
         self.transformations.append(transformation)
 
         return self.syllable.as_string()
-

@@ -74,3 +74,20 @@ class TestRule:
 
         eq_(len(trans_list), 1)
         eq_(type(trans_list[0]), core.AddCharTransformation)
+
+
+class TestBoGo:
+    def test_add_key_add_char(self):
+        b = core.BoGo(core.Rule({}))
+        b.add_key('a')
+
+        eq_(b.result(), 'a')
+        eq_(b.raw_string(), 'a')
+
+    def test_add_key_add_tone(self):
+        b = core.BoGo(core.Rule({'s': '/'}))
+        b.add_key('a')
+        b.add_key('s')
+
+        eq_(b.result(), 'á')
+        eq_(b.raw_string(), 'as')
