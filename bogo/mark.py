@@ -162,19 +162,18 @@ def add_mark_char(char, mark):
     return utils.change_case(new_char, case)
 
 
-def is_valid_mark(comps, mark_trans):
+def is_valid_mark(syllable, mark_trans):
     """
     Check whether the mark given by mark_trans is valid to add to the components
     """
     if mark_trans == "*_":
         return True
-    components = list(comps)
 
-    if mark_trans[0] == 'd' and components[0] \
-            and components[0][-1].lower() in ("d", "đ"):
+    if mark_trans[0] == 'd' and syllable.initial_consonant \
+            and syllable.initial_consonant[-1].lower() in ("d", "đ"):
         return True
-    elif components[1] != "" and \
-            strip(components[1]).lower().find(mark_trans[0]) != -1:
+    elif syllable.vowel and \
+            strip(syllable.vowel).lower().find(mark_trans[0]) != -1:
         return True
     else:
         return False
