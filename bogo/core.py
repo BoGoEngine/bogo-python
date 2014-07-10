@@ -25,9 +25,8 @@ Read the docstring for process_sequence() and process_key() first.
 """
 
 from __future__ import unicode_literals
-from bogo.validation import is_valid_combination
 from bogo.syllable import Syllable
-from bogo import utils, accent, mark
+from bogo import accent, mark, validation
 import sys
 import string
 
@@ -140,8 +139,11 @@ def process_sequence(sequence,
             result_chunks.append(result)
             result_chunks.append(key)
             result = ""
+            bg = BoGo(rules)
         else:
             result = bg.add_key(key)
+            if not validation.is_valid_string(result):
+                result = bg.raw_string()
 
     result_chunks.append(result)
     return ''.join(result_chunks)
@@ -165,6 +167,11 @@ class AddCharTransformation(Transformation):
         return syllable.append_char(self.char)
 
 
+class ByPassTransformation(AddCharTransformation):
+    def __init__(self, key):
+        super(ByPassTransformation, self).__init__(key, key)
+
+
 class AddToneMarkTransformation(Transformation):
     def __init__(self, key, tone):
         super(AddToneMarkTransformation, self).__init__(key)
@@ -181,6 +188,54 @@ class AddCharMarkTransformation(Transformation):
 
     def perform(self, syllable):
         return mark.add_mark(syllable, self.mark)
+
+
+class UndoAddToneMarkTransformation(Transformation):
+    def __init__(self, other_trans):
+        super(UndoAddToneMarkTransformation, self).__init__(other_trans.key)
+        self.tone = other_trans.tone
+
+    def perform(self, syllable):
+        # A proper syllable has exactly one tone. Undoing the
+        # last tone means removing all tones.
+        return accent.add_accent(syllable, Accent.NONE)
+
+
+class UndoAddCharMarkTransformation(Transformation):
+    def __init__(self, other_trans):
+        super(UndoAddCharMarkTransformation, self).__init__(other_trans.key)
+        self.mark = other_trans.mark
+        self.other_trans = other_trans
+
+    def perform(self, syllable):
+        new_initial_consonant, new_vowel, new_final_consonant = syllable
+
+        if self.mark == Mark.BAR:
+            new_initial_consonant = syllable.initial_consonant[:-1] + \
+                mark.add_mark_char(syllable.initial_consonant[-1:], Mark.NONE)
+        else:
+            new_vowel = "".join([mark.add_mark_char(c, Mark.NONE)
+                                for c in new_vowel])
+
+        return Syllable(new_initial_consonant, new_vowel, new_final_consonant)
+
+
+class UndoAddCharTransformation(Transformation):
+    def __init__(self, other_trans):
+        super(UndoAddCharTransformation, self).__init__(other_trans.key)
+
+    def perform(self, syllable):
+        # Just remove the last char
+        return Syllable.new_from_string(syllable.as_string()[:-1])
+
+
+def undo_transformation_of(trans):
+    if type(trans) is AddToneMarkTransformation:
+        return UndoAddToneMarkTransformation(trans)
+    elif type(trans) is AddCharMarkTransformation:
+        return UndoAddCharMarkTransformation(trans)
+    elif type(trans) is AddCharTransformation:
+        return UndoAddCharTransformation(trans)
 
 
 class Rule:
@@ -212,6 +267,7 @@ class Rule:
 
         if rule_action[0] == '<':
             # <ư
+            print(rule_action)
             trans = AddCharTransformation(key, rule_action[1])
         # elif rule_action[0] == "_":
         #     # _a^
@@ -234,12 +290,19 @@ class Rule:
 
         return trans
 
-    def transformations_from_key(self, key):
+    def possible_transformations_from(self, key):
         if key in self.rule_dict:
-            return [self.parse_rule_action(rule_action, key)
-                    for rule_action in self.rule_dict[key]]
+            if type(self.rule_dict[key]) is list:
+                transformations = \
+                    [self.parse_rule_action(rule_action, key)
+                     for rule_action in self.rule_dict[key]]
+            else:
+                transformations = \
+                    [self.parse_rule_action(self.rule_dict[key], key)]
+
+            return transformations + [ByPassTransformation(key)]
         else:
-            return [AddCharTransformation(key, key)]
+            return [ByPassTransformation(key)]
 
 
 class BoGo:
@@ -247,6 +310,7 @@ class BoGo:
         self.rule = typing_rule
         self.transformations = []
         self.syllable = Syllable('', '', '')
+        self.undone_keys = []
 
     def raw_string(self):
         return "".join([trans.key for trans in self.transformations])
@@ -254,14 +318,61 @@ class BoGo:
     def result(self):
         return self.syllable.as_string()
 
-    def best_transformation(self, transformations):
-        return transformations[0]
+    def best_transformation(self, key):
+        if key in self.undone_keys:
+            return ByPassTransformation(key)
+
+        transformations = self.rule.possible_transformations_from(key)
+
+        # Check if the same key has been used before in a transformation.
+        # If it has then undo it.
+        for trans in self.transformations:
+            if type(trans) is not ByPassTransformation and \
+                    trans.key == key:
+                self.undone_keys.append(key)
+                return undo_transformation_of(trans)
+
+        for transformation in transformations:
+            if type(transformation) is AddToneMarkTransformation:
+                if self.syllable.vowel is not "":
+                    return transformation
+            elif type(transformation) is AddCharMarkTransformation:
+                if transformation.mark == Mark.HAT:
+                    if self.syllable.vowel is not "" and \
+                            self.syllable.vowel[-1] in \
+                            ('a', 'ă', 'â', 'o', 'ô', 'ơ', 'e', 'ê'):
+                        return transformation
+                elif transformation.mark == Mark.BREVE:
+                    if self.syllable.vowel is not "" and \
+                            mark.strip(self.syllable.vowel) is 'a':
+                        return transformation
+                elif transformation.mark == Mark.HORN:
+                    v = mark.strip(self.syllable.vowel)
+                    if v is not "" and \
+                            ('u' in v or 'o' in v):
+                        return transformation
+                elif transformation.mark == Mark.BAR:
+                    ic = self.syllable.initial_consonant
+                    if ic is not "" and \
+                            mark.strip(ic)[-1] is 'd':
+                        return transformation
+            elif type(transformation) is AddCharTransformation:
+                return transformation
+            elif type(transformation) is ByPassTransformation:
+                return transformation
 
     def add_key(self, key):
-        transformation = self.best_transformation(
-            self.rule.transformations_from_key(key))
+        transformation = self.best_transformation(key)
 
+        # Recreate the syllable to fix the "gio" key sequence.
+        # After the 2 first keys, the syllable will have the form
+        # of ('g', 'i', ''). We want it to have the form
+        # ('gi', 'o', '') after the 3rd key.
+        self.syllable = Syllable.new_from_string(self.result())
         self.syllable = transformation.perform(self.syllable)
-        self.transformations.append(transformation)
 
-        return self.syllable.as_string()
+        if transformation.__class__.__name__.startswith("Undo"):
+            self.syllable = self.syllable.append_char(key)
+
+        self.transformations.append(transformation)
+        return self.result()

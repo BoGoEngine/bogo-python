@@ -64,16 +64,17 @@ class TestRule:
         rule = core.Rule({'w': ['*', '(']})
         trans_list = rule.transformations_from_key('w')
 
-        eq_(len(trans_list), 2)
+        eq_(len(trans_list), 3)
         eq_(type(trans_list[0]), core.AddCharMarkTransformation)
         eq_(type(trans_list[1]), core.AddCharMarkTransformation)
+        eq_(type(trans_list[2]), core.ByPassTransformation)
 
     def test_transformations_from_key_non_rule_key(self):
         rule = core.Rule({'w': ['*', '(']})
         trans_list = rule.transformations_from_key('a')
 
         eq_(len(trans_list), 1)
-        eq_(type(trans_list[0]), core.AddCharTransformation)
+        eq_(type(trans_list[0]), core.ByPassTransformation)
 
 
 class TestBoGo:
@@ -84,6 +85,14 @@ class TestBoGo:
         eq_(b.result(), 'a')
         eq_(b.raw_string(), 'a')
 
+    def test_add_key_add_mark(self):
+        b = core.BoGo(core.Rule({'a': '^'}))
+        b.add_key('a')
+        b.add_key('a')
+
+        eq_(b.result(), 'â')
+        eq_(b.raw_string(), 'aa')
+
     def test_add_key_add_tone(self):
         b = core.BoGo(core.Rule({'s': '/'}))
         b.add_key('a')
@@ -91,3 +100,8 @@ class TestBoGo:
 
         eq_(b.result(), 'á')
         eq_(b.raw_string(), 'as')
+
+
+class TestProcessSequence:
+    def test_normal_typing(self):
+        eq_(core.process_sequence('as'), 'á')
