@@ -507,9 +507,15 @@ def handle_backspace(converted_string, raw_sequence):
     deleted_char = converted_string[-1]
     converted_string = converted_string[:-1]
 
-    index = raw_sequence.rfind(deleted_char)
-    raw_sequence = raw_sequence[:-2] if index < 0 else \
-        raw_sequence[:index] + \
-        raw_sequence[(index + 1):]
+    _accent = accent.get_accent_char(deleted_char)
+    _mark = mark.get_mark_char(deleted_char)
+
+    if _mark and _accent:
+        raw_sequence = raw_sequence[:-3]
+    elif _mark or _accent:
+        raw_sequence = raw_sequence[:-2]
+    else:
+        index = raw_sequence.rfind(deleted_char)
+        raw_sequence = raw_sequence[:index] + raw_sequence[(index + 1):]
 
     return converted_string, raw_sequence
