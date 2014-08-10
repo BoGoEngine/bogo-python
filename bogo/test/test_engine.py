@@ -6,6 +6,7 @@ from nose.plugins.attrib import attr
 from functools import partial
 import codecs
 
+import bogo
 from bogo.core import _Action, _get_action, process_sequence, handle_backspace
 from bogo.mark import Mark
 import os
@@ -197,16 +198,27 @@ class TestProcessSeq():
 
 class TestHandleBackspace():
 
-	def test_delete_non_im_key(self):
-		eq_(handle_backspace('an', 'an'), ('a', 'a'))
-		eq_(handle_backspace('a', 'a'), ('', ''))
+    def test_delete_non_im_key(self):
+        eq_(handle_backspace('an', 'an'), ('a', 'a'))
+        eq_(handle_backspace('a', 'a'), ('', ''))
 
-	def test_delete_one_im_key(self):
-		eq_(handle_backspace('bà', 'baf'), ('b', 'b'))
-		eq_(handle_backspace('bâ', 'baa'), ('b', 'b'))
+    def test_delete_one_im_key(self):
+        eq_(handle_backspace('bà', 'baf'), ('b', 'b'))
+        eq_(handle_backspace('bâ', 'baa'), ('b', 'b'))
 
-	def test_delete_two_im_keys(self):
-		eq_(handle_backspace('bớ', 'bows'), ('b', 'b'))
-	
-	def test_non_im_key_before_im_key(self):
-		eq_(handle_backspace('bân', 'bana'), ('bâ', 'baa'))
+    def test_delete_two_im_keys(self):
+        eq_(handle_backspace('bớ', 'bows'), ('b', 'b'))
+    
+    def test_non_im_key_before_im_key(self):
+        eq_(handle_backspace('bân', 'bana'), ('bâ', 'baa'))
+
+    def test_im_insert_key(self):
+        eq_(handle_backspace('bư', 'bw'), ('b', 'b'))
+        eq_(handle_backspace('boư', 'bow'), ('bo', 'bo'))
+        eq_(handle_backspace('bá', 'bafjxrs'), ('b', 'b'))
+        eq_(handle_backspace('bá', 'ba23451',
+            bogo.core.get_vni_definition()), ('b', 'b'))
+
+        # FIXME
+        # eq_(handle_backspace('dườ', 'duwfow'), ('dư', 'duw'))
+        # eq_(handle_backspace('uyể', 'uryee'), ('uy', 'uy'))
