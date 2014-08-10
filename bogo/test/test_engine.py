@@ -205,6 +205,7 @@ class TestHandleBackspace():
     def test_delete_one_im_key(self):
         eq_(handle_backspace('bà', 'baf'), 'b')
         eq_(handle_backspace('bâ', 'baa'), 'b')
+        eq_(handle_backspace('sý', 'sys'), 's')
 
     def test_delete_two_im_keys(self):
         eq_(handle_backspace('bớ', 'bows'), 'b')

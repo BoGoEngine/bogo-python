@@ -522,7 +522,7 @@ def handle_backspace(converted_string, raw_sequence, im_rules=None):
 
         while i >= 0:
             if raw_sequence[i] not in im_rules and \
-                    raw_sequence[i] not in "aeioud":
+                    raw_sequence[i] not in "aeiouyd":
                 i += 1
                 break
             else:
@@ -533,7 +533,6 @@ def handle_backspace(converted_string, raw_sequence, im_rules=None):
         # that can be converted to the deleted_char
         k = 0
         while k < len_raw_sequence:
-            print(raw_sequence[i + k:])
             if process_sequence(raw_sequence[i + k:], im_rules) == deleted_char:
                 # Delete that subsequence
                 raw_sequence = raw_sequence[:i + k]
